@@ -7,6 +7,11 @@ el free tier de Streamlit Community Cloud (1 GB RAM).
 
 from __future__ import annotations
 
+import os
+
+# Mismo workaround que streamlit_app.py — por si rag.py se importa directo.
+os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+
 import re
 import uuid
 from dataclasses import dataclass
