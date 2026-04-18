@@ -8,13 +8,6 @@ sin sentence-transformers. Huella ~500 MB RAM.
 from __future__ import annotations
 
 import os
-
-# Workaround: en Streamlit Cloud, chromadb → opentelemetry-otlp-grpc pull una
-# versión de _pb2.py incompatible con protobuf>=4.21. Forzar la implementación
-# Python evita el "Descriptors cannot be created directly". Debe setearse
-# ANTES de importar cualquier módulo que cargue protobuf.
-os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
-
 import traceback
 import uuid
 from time import perf_counter

@@ -14,11 +14,16 @@ Responde preguntas sobre documentos corporativos usando un RAG simple (retrieve 
 |---|---|
 | `streamlit` | UI del chat |
 | `groq` | cliente LLM (free tier) |
-| `chromadb` | vector store + embedding default onnx/MiniLM |
+| `rank-bm25` | retrieval puro-Python sobre los documentos |
 | `tiktoken` | conteo de tokens |
 | `python-dotenv` | carga de `.env` local |
 
-**Huella estimada**: ~500 MB RAM. Sin `torch`, `sentence-transformers`, `langchain`, `langgraph`.
+**Huella estimada**: ~250 MB RAM. Sin `torch`, `sentence-transformers`, `langchain`, `langgraph`, `chromadb`.
+
+**¿Por qué BM25 y no vector search?** ChromaDB arrastra `opentelemetry-otlp-grpc`
+con un `_pb2.py` viejo que crashea con `protobuf>=4.21` en el sandbox de
+Streamlit Cloud. Para un corpus de 4 archivos (~80 chunks), BM25 entrega
+recall equivalente a un vector search — y cabe en 2 MB sin drama.
 
 ## Correr localmente
 
@@ -29,7 +34,7 @@ export GROQ_API_KEY="gsk_..."
 streamlit run streamlit_app.py
 ```
 
-El primer arranque tarda ~15 s mientras ChromaDB descarga su modelo de embedding ONNX (~80 MB). Las siguientes queries responden en <2 s.
+El primer arranque tarda ~2 s (indexado BM25 en memoria del corpus). Las queries responden en ~1 s más el roundtrip a Groq.
 
 ## Deploy a Streamlit Community Cloud
 
@@ -48,7 +53,7 @@ El primer arranque tarda ~15 s mientras ChromaDB descarga su modelo de embedding
 ```
 .
 ├── streamlit_app.py         # UI + loop del agente
-├── rag.py                   # MiniRAG sobre ChromaDB
+├── rag.py                   # MiniRAG con BM25 en memoria
 ├── guardrails.py            # InputGuardrail + OutputGuardrail (+ ToolGuardrail)
 ├── requirements.txt
 ├── .streamlit/
@@ -63,8 +68,8 @@ El primer arranque tarda ~15 s mientras ChromaDB descarga su modelo de embedding
 
 ## Limitaciones conocidas
 
-- **Sin persistencia**: Streamlit Cloud free reinicia el disco en cada redeploy y tras ~12 h de inactividad. ChromaDB reindexe el corpus en cada cold start (~5 s).
-- **Embedding sólo-inglés en origen**: el default de ChromaDB (`all-MiniLM-L6-v2`) rinde aceptablemente en español para consultas cortas; si el recall falla, considera cambiar a un modelo multilingüe pero prepárate para añadir `sentence-transformers` (+500 MB).
+- **Sin persistencia**: todo el índice BM25 vive en memoria; se reconstruye en cada cold start (~2 s).
+- **Solo retrieval léxico**: sin embeddings, BM25 matchea por palabras exactas + variantes morfológicas vía stemming implícito. Para queries con sinónimos muy diferentes al corpus, el recall puede sufrir. Para este corpus pequeño y bien estructurado, funciona de sobra.
 - **Corpus estático**: solo los 4 archivos en `data/`. No hay upload en la UI.
 - **Un solo call LLM**: no hay planner/verifier/rerank. Si necesitas revisión de calidad o control de iteraciones, usa la versión completa del bootcamp.
 - **Groq TPD** free tier: ~100k tokens/día → ~50 queries antes de saltar el límite.

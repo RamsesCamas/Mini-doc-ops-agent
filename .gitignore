@@ -6,7 +6,6 @@ venv/
 .env
 .env.local
 .streamlit/secrets.toml
-chroma_mini/
 *.db
 .DS_Store
 .vscode/
